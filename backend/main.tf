@@ -14,6 +14,11 @@ resource "azurerm_storage_account" "backend_sa" {
   access_tier               = "Hot"
   account_replication_type  = "LRS"
   allow_blob_public_access  = false
+
+  network_rules {
+    default_action = "Deny"
+    ip_rules       = [var.my_temp_machine_ip]
+  }
 }
 
 resource "azurerm_storage_container" "backend_ct" {
@@ -21,49 +26,49 @@ resource "azurerm_storage_container" "backend_ct" {
   storage_account_name = azurerm_storage_account.backend_sa.name
 }
 
-data "azurerm_storage_account_sas" "backend_state_token" {
-  connection_string = azurerm_storage_account.backend_sa.primary_connection_string
-  https_only        = true
+# data "azurerm_storage_account_sas" "backend_state_token" {
+#   connection_string = azurerm_storage_account.backend_sa.primary_connection_string
+#   https_only        = true
 
-  resource_types {
-    service   = true
-    container = true
-    object    = true
-  }
+#   resource_types {
+#     service   = true
+#     container = true
+#     object    = true
+#   }
 
-  services {
-    blob  = true
-    queue = false
-    table = false
-    file  = false
-  }
+#   services {
+#     blob  = true
+#     queue = false
+#     table = false
+#     file  = false
+#   }
 
-  start  = timestamp()
-  expiry = timeadd(timestamp(), "168h")
+#   start  = timestamp()
+#   expiry = timeadd(timestamp(), "168h")
 
-  permissions {
-    read    = true
-    write   = true
-    add     = true
-    create  = true
-    delete  = true
-    list    = true
-    process = true
-    update  = true
-  }
-}
+#   permissions {
+#     read    = true
+#     write   = true
+#     add     = true
+#     create  = true
+#     delete  = true
+#     list    = true
+#     process = true
+#     update  = true
+#   }
+# }
 
-resource "null_resource" "write_backend_config" {
-  depends_on = [azurerm_storage_container.backend_ct]
+# resource "null_resource" "write_backend_config" {
+#   depends_on = [azurerm_storage_container.backend_ct]
 
-  provisioner "local-exec" {
-    command = <<EOT
-            Add-Content -Value 'storage_account_name = "${azurerm_storage_account.backend_sa.name}"' -Path backend-config.txt
-            Add-Content -Value  'container_name = "${azurerm_storage_container.backend_ct.name}"' -Path backend-config.txt
-            Add-Content -Value  'key = "terraform.tfstate"' -Path backend-config.txt
-            Add-Content -Value  'sas_token = "${data.azurerm_storage_account_sas.backend_state_token.sas}"' -Path backend-config.txt
-            EOT
+#   provisioner "local-exec" {
+#     command = <<EOT
+#             Add-Content -Value 'storage_account_name = "${azurerm_storage_account.backend_sa.name}"' -Path backend-config.txt
+#             Add-Content -Value  'container_name = "${azurerm_storage_container.backend_ct.name}"' -Path backend-config.txt
+#             Add-Content -Value  'key = "terraform.tfstate"' -Path backend-config.txt
+#             Add-Content -Value  'sas_token = "${data.azurerm_storage_account_sas.backend_state_token.sas}"' -Path backend-config.txt
+#             EOT
 
-    interpreter = ["PowerShell", "-Command"]
-  }
-}
+#     interpreter = ["PowerShell", "-Command"]
+#   }
+# }
